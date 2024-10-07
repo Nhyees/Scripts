@@ -42,7 +42,7 @@ else:
 
     print(f"\nFichier Excel (.xlsx) sélectionné : {xlsx_file}")
 
-# Demander un OK avant de continuer
+# Demander une validation avant de continuer
 confirmation = input("\nTape 'OK' pour continuer, ou appuie sur Entrée pour annuler : ").strip()
 
 if confirmation.upper() != 'OK':
@@ -70,7 +70,7 @@ name_column_letter = get_valid_column_letter("\nEntre la lettre de la colonne co
 extra_info_column_letter = get_valid_column_letter("Entre la lettre de la colonne contenant les titres de musique (ex: D ou E) : ")
 link_column_letter = get_valid_column_letter("Entre la lettre de la colonne contenant les hyperliens à télécharger (ex: D ou E) : ")
 
-# Convertir les lettres en indices (0-indexed)
+# Convertir les lettres en indices
 name_column_index = ord(name_column_letter) - ord('A')
 extra_info_column_index = ord(extra_info_column_letter) - ord('A')
 link_column_index = ord(link_column_letter) - ord('A')
@@ -117,7 +117,7 @@ for index in range(total_videos):
     # Vérifier si le fichier MP4 existe déjà
     if os.path.exists(mp4_file_name):
         print("Le fichier existe déjà, passage à la vidéo suivante.\n")
-        print("* * *")  # Étoiles >.<
+        print("* * *")
         continue  # Passer à la vidéo suivante
 
     try:
@@ -134,6 +134,6 @@ for index in range(total_videos):
     except Exception as e:
         print(f"Erreur lors du téléchargement pour {link}: {e}\n")
 
-    print("* * *")  # Étoile après chaque vidéo traitée
+    print("* * *")  # Étoile après chaque vidéo traitée >.<
 
 print("\nTéléchargement terminé ! Courage pour la suite (>.<)")

@@ -5,7 +5,6 @@
 // @description  Ajouter des musiques dans un panier et exporter en JSON depuis AnisongDB
 // @author       Nhyees
 // @match        https://anisongdb.com/*
-// @updateURL    https://raw.githubusercontent.com/Nhyees/Scripts/main/AnisongDB%20-%20Panier%20de%20musiques
 // @downloadURL  https://raw.githubusercontent.com/Nhyees/Scripts/main/AnisongDB%20-%20Panier%20de%20musiques
 // @grant        none
 // @run-at       document-start

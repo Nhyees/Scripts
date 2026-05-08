@@ -5,6 +5,7 @@
 // @description  Ajouter des musiques dans un panier et exporter en JSON depuis AnisongDB
 // @author       Nhyees
 // @match        https://anisongdb.com/*
+// @updateURL    https://raw.githubusercontent.com/Nhyees/Scripts/main/AnisongDB%20-%20Panier%20de%20musiques
 // @downloadURL  https://raw.githubusercontent.com/Nhyees/Scripts/main/AnisongDB%20-%20Panier%20de%20musiques
 // @grant        none
 // @run-at       document-start
@@ -16,7 +17,7 @@
   let panier = [];
   let panierVisible = false;
 
-  // Cle : "animeJPName|songName|songArtist"
+  // "animeJPName|songName|songArtist"
   const apiCache = {};
   window._adbCache = apiCache; // debug : verifiable dans la console apres une recherche
 
@@ -43,7 +44,7 @@
     };
   })();
 
-  // Fallback XHR
+  // Fallback XHR au cas ou le site n'utilise pas fetch
   (function intercepterXHR() {
     const openOriginal = XMLHttpRequest.prototype.open;
     const sendOriginal = XMLHttpRequest.prototype.send;
@@ -73,13 +74,12 @@
     const cells = row.querySelectorAll('td');
     if (cells.length < 5) return null;
 
-    // Priorite au span.copyable pour eviter de lire le texte des icones FontAwesome
     const getText = (cell) =>
       cell.querySelector('.copyable')?.innerText?.trim() ||
       cell.innerText?.trim() ||
       '';
 
-    // Ordre des colonnes : [0]ANN ID [1]Anime [2]Type [3]Titre [4]Artiste [5]mp3 [6]trash
+    // [0]ANN ID [1]Anime [2]Type [3]Titre [4]Artiste [5]mp3 [6]trash
     const animeJPName = getText(cells[1]);
     const songType    = getText(cells[2]);
     const songName    = getText(cells[3]);
@@ -87,7 +87,6 @@
 
     if (!songName && !animeJPName) return null;
 
-    // Enrichir avec les URLs capturees depuis l'API si disponibles
     const cle = [animeJPName, songName, songArtist].join('|');
     const api = apiCache[cle];
 
@@ -134,6 +133,14 @@
     }
   }
 
+  function ajouterTous() {
+    document.querySelectorAll('tr').forEach(row => {
+      if (row.querySelectorAll('td').length < 5) return;
+      const song = extraireDonneesDeLaLigne(row);
+      if (song) ajouterAuPanier(song, row.querySelector('.adb-btn-plus'));
+    });
+  }
+
   // ---- Export ----
 
   function exporterJSON() {
@@ -152,7 +159,7 @@
     URL.revokeObjectURL(url);
   }
 
-  // ---- Injection du bouton + dans les lignes ----
+  // ---- Bouton ----
 
   function injecterBoutonDansLigne(row) {
     if (row.querySelector('.adb-btn-plus')) return;
@@ -161,7 +168,7 @@
     if (!song) return;
 
     const tds = row.querySelectorAll('td');
-    const tdTitre = tds[3]; // cellule du titre de la musique
+    const tdTitre = tds[3];
     if (!tdTitre) return;
 
     const btn = document.createElement('button');
@@ -172,7 +179,7 @@
 
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      // On relit les donnees au clic : le cache API a pu etre alimente entre-temps
+
       const songActuelle = extraireDonneesDeLaLigne(row);
       if (songActuelle) togglePanier(songActuelle, btn);
     });
@@ -185,7 +192,10 @@
 
   function mettreAJourUI() {
     const badge = document.getElementById('adb-badge');
-    if (badge) badge.textContent = panier.length;
+    if (badge) {
+      badge.textContent = panier.length;
+      badge.style.visibility = panier.length === 0 ? 'hidden' : 'visible';
+    }
 
     const compteur = document.getElementById('adb-compteur-panneau');
     if (compteur) {
@@ -270,7 +280,7 @@
         '<circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>' +
         '<path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>' +
       '</svg>' +
-      '<span id="adb-badge">0</span>';
+      '<span id="adb-badge" style="visibility:hidden">0</span>';
 
     boutonOuvrir.addEventListener('click', () => {
       panierVisible = !panierVisible;
@@ -278,8 +288,6 @@
       if (panierVisible) mettreAJourUI();
     });
 
-    // Le bouton est injecte dans la .toolbar du site (a cote du lien GitHub).
-    // On attend 'load' car le script demarre avant que le DOM soit construit.
     function placerBouton() {
       const toolbar = document.querySelector('.toolbar');
       (toolbar || document.body).appendChild(boutonOuvrir);
@@ -576,6 +584,30 @@
         color: rgba(255,255,255,0.85);
         border-color: rgba(255,255,255,0.35);
       }
+      .adb-btn-tout {
+        background: transparent;
+        border: 1px solid rgba(255,255,255,0.18);
+        border-radius: 4px;
+        color: rgba(255,255,255,0.45);
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: bold;
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        margin-left: 8px;
+        transition: background 0.1s, color 0.1s, border-color 0.1s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        vertical-align: middle;
+      }
+      .adb-btn-tout:hover {
+        background: rgba(255,255,255,0.1);
+        color: rgba(255,255,255,0.85);
+        border-color: rgba(255,255,255,0.35);
+      }
+
       .adb-btn-plus.adb-btn-dans-panier {
         background: rgba(130, 80, 180, 0.25);
         border-color: rgba(150, 100, 200, 0.4);
@@ -587,11 +619,31 @@
 
   // ---- Scan et observation du DOM ----
 
+  function injecterBoutonToutAjouter(headerRow) {
+    if (headerRow.querySelector('.adb-btn-tout')) return;
+    const ths = headerRow.querySelectorAll('th');
+    const thTitre = ths[3];
+    if (!thTitre) return;
+
+    const btn = document.createElement('button');
+    btn.className = 'adb-btn-tout';
+    btn.textContent = '+';
+    btn.title = 'Tout ajouter au panier';
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      ajouterTous();
+    });
+
+    thTitre.style.whiteSpace = 'nowrap';
+    thTitre.appendChild(btn);
+  }
+
   function scannerLignes() {
-    // Les <tr> d'anisongdb (Angular) n'ont pas de classes : on filtre par nb de <td>.
-    // Les lignes de donnees en ont >= 5 ; les en-tetes utilisent des <th>.
+
     document.querySelectorAll('tr').forEach(row => {
-      if (row.querySelectorAll('td').length >= 5) {
+      if (row.querySelectorAll('th').length >= 5) {
+        injecterBoutonToutAjouter(row);
+      } else if (row.querySelectorAll('td').length >= 5) {
         injecterBoutonDansLigne(row);
       }
     });
@@ -600,14 +652,12 @@
   function demarrerObservateur() {
     let timer = null;
     const obs = new MutationObserver(() => {
-      // Debounce pour eviter de scanner a chaque micro-mutation Angular
+
       clearTimeout(timer);
       timer = setTimeout(scannerLignes, 200);
     });
     obs.observe(document.body, { childList: true, subtree: true });
 
-    // Angular peut re-rendre des lignes sans declencher de mutation detectee :
-    // un scan periodique garantit que les boutons restent presents.
     setInterval(scannerLignes, 1500);
   }
 
@@ -626,3 +676,4 @@
     init();
   }
 })();
+

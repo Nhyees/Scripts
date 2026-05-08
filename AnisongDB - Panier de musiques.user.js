@@ -17,9 +17,9 @@
   let panier = [];
   let panierVisible = false;
 
-  // "animeJPName|songName|songArtist"
+  // animeJPName|songName|songArtist
   const apiCache = {};
-  window._adbCache = apiCache; // debug : verifiable dans la console apres une recherche
+  window._adbCache = apiCache;
 
   function stockerReponseAPI(data) {
     const liste = Array.isArray(data) ? data : (data?.songs || data?.results || []);
@@ -44,7 +44,7 @@
     };
   })();
 
-  // Fallback XHR au cas ou le site n'utilise pas fetch
+  // Fallback XHR au cas où
   (function intercepterXHR() {
     const openOriginal = XMLHttpRequest.prototype.open;
     const sendOriginal = XMLHttpRequest.prototype.send;
@@ -60,7 +60,7 @@
     };
   })();
 
-  // ---- Donnees ----
+  // ---- Données ----
 
   function genId(song) {
     return [song.animeJPName, song.songName, song.songArtist].join('|');
@@ -250,7 +250,7 @@
       btnRetirer.textContent = '×';
       btnRetirer.addEventListener('click', () => {
         retirerDuPanier(song, null);
-        // Resynchroniser l'etat visuel du bouton + dans la table
+        
         document.querySelectorAll('.adb-btn-plus.adb-btn-dans-panier').forEach(b => {
           const parentRow = b.closest('tr');
           if (!parentRow) return;

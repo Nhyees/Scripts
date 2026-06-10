@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AnisongDB - Panier de musiques
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Ajouter des musiques dans un panier et exporter en JSON depuis AnisongDB
 // @author       Nhyees
 // @match        https://anisongdb.com/*
@@ -17,17 +17,21 @@
   let panier = [];
   let panierVisible = false;
 
-  // animeJPName|songName|songArtist
+  // Index principal : animeJPName|songName|songArtist
+  // Index secondaire : id:<songId> et ann:<annId>
   const apiCache = {};
   window._adbCache = apiCache;
 
   function stockerReponseAPI(data) {
     const liste = Array.isArray(data) ? data : (data?.songs || data?.results || []);
     liste.forEach(song => {
-      if (song && song.songName) {
-        const cle = [song.animeJPName, song.songName, song.songArtist].join('|');
-        apiCache[cle] = song;
-      }
+      if (!song?.songName) return;
+      // Index textuel (existant)
+      const cle = [song.animeJPName, song.songName, song.songArtist].join('|');
+      apiCache[cle] = song;
+      // Index par identifiants numériques
+      if (song.songId != null) apiCache[`id:${song.songId}`] = song;
+      if (song.annId  != null) apiCache[`ann:${song.annId}`]  = song;
     });
   }
 
@@ -80,6 +84,7 @@
       '';
 
     // [0]ANN ID [1]Anime [2]Type [3]Titre [4]Artiste [5]mp3 [6]trash
+    const annIdRaw    = getText(cells[0]);
     const animeJPName = getText(cells[1]);
     const songType    = getText(cells[2]);
     const songName    = getText(cells[3]);
@@ -87,8 +92,12 @@
 
     if (!songName && !animeJPName) return null;
 
+    // Priorité : annId > clé textuelle
     const cle = [animeJPName, songName, songArtist].join('|');
-    const api = apiCache[cle];
+    const api =
+      (annIdRaw && apiCache[`ann:${annIdRaw}`]) ||
+      apiCache[cle] ||
+      null;
 
     return {
       animeJPName: api?.animeJPName || animeJPName,
@@ -179,7 +188,6 @@
 
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-
       const songActuelle = extraireDonneesDeLaLigne(row);
       if (songActuelle) togglePanier(songActuelle, btn);
     });
@@ -250,7 +258,7 @@
       btnRetirer.textContent = '×';
       btnRetirer.addEventListener('click', () => {
         retirerDuPanier(song, null);
-        
+
         document.querySelectorAll('.adb-btn-plus.adb-btn-dans-panier').forEach(b => {
           const parentRow = b.closest('tr');
           if (!parentRow) return;
@@ -639,7 +647,6 @@
   }
 
   function scannerLignes() {
-
     document.querySelectorAll('tr').forEach(row => {
       if (row.querySelectorAll('th').length >= 5) {
         injecterBoutonToutAjouter(row);
@@ -652,7 +659,6 @@
   function demarrerObservateur() {
     let timer = null;
     const obs = new MutationObserver(() => {
-
       clearTimeout(timer);
       timer = setTimeout(scannerLignes, 200);
     });
@@ -676,4 +682,3 @@
     init();
   }
 })();
-
